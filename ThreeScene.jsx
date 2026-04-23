@@ -112,7 +112,7 @@ export default function ThreeScene() {
 
     const docMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 0.5, roughness: 0.2, clearcoat: 1 });
     const docGeo = new THREE.BoxGeometry(4, 5, 0.2);
-    
+
     const doc1 = new THREE.Mesh(docGeo, docMat);
     doc1.position.set(0, 0, 0);
     doc1.rotation.z = Math.PI / 12;
@@ -126,7 +126,7 @@ export default function ThreeScene() {
     doc3.position.set(-1, 0.5, -4);
     doc3.rotation.z = Math.PI / 8;
     doc3.rotation.y = -Math.PI / 6;
-    
+
     const crossMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
     const hBar = new THREE.BoxGeometry(1.5, 0.3, 0.3);
     const vBar = new THREE.BoxGeometry(0.3, 1.5, 0.3);
@@ -146,7 +146,7 @@ export default function ThreeScene() {
 
     // Neural Core (Inner solid)
     const neuralCoreGeo = new THREE.IcosahedronGeometry(1, 2);
-    const neuralCoreMat = new THREE.MeshPhysicalMaterial({ 
+    const neuralCoreMat = new THREE.MeshPhysicalMaterial({
       color: 0xffffff, emissive: 0x00f0ff, emissiveIntensity: 2.0, wireframe: true, transparent: true, opacity: 0.8
     });
     const neuralCore = new THREE.Mesh(neuralCoreGeo, neuralCoreMat);
@@ -178,7 +178,7 @@ export default function ThreeScene() {
     cross3.position.set(0, 2.5, 0);
     const cross4 = buildCross();
     cross4.position.set(0, -2.5, 0);
-    
+
     const crossOrbit = new THREE.Group();
     crossOrbit.add(cross1, cross2, cross3, cross4);
     aiDoctorGroup.add(crossOrbit);
@@ -188,7 +188,7 @@ export default function ThreeScene() {
     const orbitRing1 = new THREE.Mesh(ringGeo1, new THREE.MeshBasicMaterial({ color: 0x8b5cf6, transparent: true, opacity: 0.6 }));
     orbitRing1.rotation.x = Math.PI / 2;
     aiDoctorGroup.add(orbitRing1);
-    
+
     const ringGeo2 = new THREE.TorusGeometry(3.5, 0.01, 16, 100);
     const orbitRing2 = new THREE.Mesh(ringGeo2, new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.4 }));
     orbitRing2.rotation.y = Math.PI / 4;
@@ -199,14 +199,14 @@ export default function ThreeScene() {
     const neuronCount = 200;
     const neuronPos = [];
     for (let i = 0; i < neuronCount; i++) {
-       const theta = Math.random() * Math.PI * 2;
-       const phi = Math.acos((Math.random() * 2) - 1);
-       const r = 1.0 + Math.random() * 0.7;
-       neuronPos.push(
-         r * Math.sin(phi) * Math.cos(theta),
-         r * Math.sin(phi) * Math.sin(theta),
-         r * Math.cos(phi)
-       );
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos((Math.random() * 2) - 1);
+      const r = 1.0 + Math.random() * 0.7;
+      neuronPos.push(
+        r * Math.sin(phi) * Math.cos(theta),
+        r * Math.sin(phi) * Math.sin(theta),
+        r * Math.cos(phi)
+      );
     }
     neuronGeo.setAttribute('position', new THREE.Float32BufferAttribute(neuronPos, 3));
     const neuronMat = new THREE.PointsMaterial({ color: 0x00f0ff, size: 0.05, transparent: true, opacity: 0.8 });
@@ -226,7 +226,7 @@ export default function ThreeScene() {
     const earthCloudsMap = textureLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png');
 
     const earthGeo = new THREE.SphereGeometry(3, 64, 64);
-    const earthMat = new THREE.MeshPhongMaterial({ 
+    const earthMat = new THREE.MeshPhongMaterial({
       map: earthMap,
       specularMap: earthSpecMap,
       normalMap: earthNormalMap,
@@ -238,7 +238,7 @@ export default function ThreeScene() {
 
     // Subtle atmospheric glow
     const atmosGeo = new THREE.SphereGeometry(3.15, 64, 64);
-    const atmosMat = new THREE.MeshBasicMaterial({ 
+    const atmosMat = new THREE.MeshBasicMaterial({
       color: 0x0088ff,
       transparent: true,
       opacity: 0.15,
