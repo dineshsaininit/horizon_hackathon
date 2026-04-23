@@ -305,8 +305,10 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const canvasRef = useRef(null);
+  const requestedRole = new URLSearchParams(location.search).get('role');
+  const requestedIsDoctor = location.state?.isDoctor ?? requestedRole === 'doctor';
 
-  const [isDoctor, setIsDoctor] = useState(location.state?.isDoctor ?? false);
+  const [isDoctor, setIsDoctor] = useState(requestedIsDoctor);
   const [aadhar, setAadhar] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -318,6 +320,11 @@ export default function Login() {
     const id = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(id);
   }, []);
+
+  useEffect(() => {
+    setIsDoctor(requestedIsDoctor);
+    setError('');
+  }, [requestedIsDoctor]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
