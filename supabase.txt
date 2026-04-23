@@ -1,0 +1,95 @@
+-- Create Patients Table
+CREATE TABLE patients (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    aadhar_no TEXT UNIQUE NOT NULL,
+    mobile_no TEXT NOT NULL,
+    state TEXT,
+    city TEXT,
+    district TEXT,
+    password TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW())
+);
+
+-- Create Doctors Table
+CREATE TABLE doctors (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    aadhar_no TEXT UNIQUE NOT NULL,
+    mobile_no TEXT NOT NULL,
+    state TEXT,
+    city TEXT,
+    district TEXT,
+    password TEXT NOT NULL,
+    hospital_name TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW())
+);
+
+-- Create Medical History Table
+CREATE TABLE medical_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    patient_name TEXT,
+    patient_aadhar_no TEXT REFERENCES patients(aadhar_no) ON DELETE CASCADE,
+    doctor_aadhar_no TEXT REFERENCES doctors(aadhar_no) ON DELETE SET NULL,
+    past_medical_record TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW())
+);
+
+
+
+-- 1. CLEAR OLD TABLES IF THEY EXIST
+DROP TABLE IF EXISTS medical_history CASCADE;
+DROP TABLE IF EXISTS doctors CASCADE;
+DROP TABLE IF EXISTS patients CASCADE;
+
+-- 2. CREATE TABLES
+CREATE TABLE patients (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    aadhar_no TEXT UNIQUE NOT NULL,
+    mobile_no TEXT NOT NULL,
+    state TEXT,
+    city TEXT,
+    district TEXT,
+    password TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW())
+);
+
+CREATE TABLE doctors (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    aadhar_no TEXT UNIQUE NOT NULL,
+    mobile_no TEXT NOT NULL,
+    state TEXT,
+    city TEXT,
+    district TEXT,
+    password TEXT NOT NULL,
+    hospital_name TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW())
+);
+
+CREATE TABLE medical_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    patient_name TEXT NOT NULL,
+    patient_aadhar_no TEXT REFERENCES patients(aadhar_no) ON DELETE CASCADE,
+    doctor_aadhar_no TEXT REFERENCES doctors(aadhar_no) ON DELETE SET NULL,
+    past_medical_record TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW())
+);
+
+-- 3. INSERT SAMPLE DATA
+INSERT INTO patients (name, aadhar_no, mobile_no, state, city, district, password)
+VALUES 
+('Ramesh Gupta', '1001', '9876543210', 'Maharashtra', 'Mumbai', 'Mumbai City', 'ramesh123'),
+('Priya Patel', '1002', '8765432109', 'Gujarat', 'Ahmedabad', 'Ahmedabad', 'priya123');
+
+INSERT INTO doctors (name, aadhar_no, mobile_no, state, city, district, password, hospital_name)
+VALUES 
+('Anjali Sharma', '9001', '9998887776', 'Maharashtra', 'Mumbai', 'Mumbai Suburban', 'anjali123', 'Apollo General Hospital'),
+('Rajesh Kumar', '9002', '8887776665', 'Delhi', 'New Delhi', 'New Delhi', 'rajesh123', 'AIIMS New Delhi');
+
+-- 4. INSERT SAMPLE MEDICAL HISTORY
+INSERT INTO medical_history (patient_name, patient_aadhar_no, doctor_aadhar_no, past_medical_record)
+VALUES
+('Ramesh Gupta', '1001', '9001', 'Patient presented with high fever, suspected malaria. Prescribed Antimalarial drugs and advised complete bed rest for 1 week.');
+

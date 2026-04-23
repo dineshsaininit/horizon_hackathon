@@ -4,6 +4,7 @@ import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
 import DoctorPortal from './pages/DoctorPortal.jsx';
 import PatientPortal from './pages/PatientPortal.jsx';
+import HealthMap from './pages/HealthMap.jsx';
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/doctor-portal" element={<DoctorPortal />} />
         <Route path="/patient-portal" element={<PatientPortal />} />
+        <Route path="/health-map" element={<HealthMap />} />
       </Routes>
     </Router>
   );

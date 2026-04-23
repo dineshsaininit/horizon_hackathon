@@ -12,29 +12,29 @@ export default function Home() {
           <span className="logo-icon">H</span>orizon Health
         </div>
         <div className="nav-links">
-          <a href="#features" style={{display: 'flex', alignItems: 'center', gap: '0.4rem'}}>
+          <a href="#features" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
             Features
           </a>
-          <a href="#about" style={{display: 'flex', alignItems: 'center', gap: '0.4rem'}}>
+          <a href="#about" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
             About
           </a>
-          <a href="#ai-doctor" style={{display: 'flex', alignItems: 'center', gap: '0.4rem'}}>
+          <a href="#ai-doctor" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
             AI Doctor
           </a>
-          <a href="#health-map" style={{display: 'flex', alignItems: 'center', gap: '0.4rem'}}>
+          <Link to="/health-map" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)', textDecoration: 'none', fontWeight: 600 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
             Health Map
-          </a>
+          </Link>
         </div>
         <div className="auth-buttons">
-          <Link to="/login" className="btn-clean" id="login-patient" style={{display: 'flex', alignItems: 'center', gap: '0.4rem'}}>
+          <Link to="/login" state={{ isDoctor: false }} className="btn-clean" id="login-patient" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
             Patient Login
           </Link>
-          <Link to="/login" className="btn-glow" id="login-doctor" style={{display: 'flex', alignItems: 'center', gap: '0.4rem'}}>
+          <Link to="/login" state={{ isDoctor: true }} className="btn-glow" id="login-doctor" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path><path d="M12 11v4"></path><path d="M10 13h4"></path></svg>
             Doctor Portal
           </Link>
@@ -44,9 +44,9 @@ export default function Home() {
       <main className="hero">
         <div className="hero-content">
           <div className="badge">Next Generation Tracking</div>
-          <h1 className="title">Healthcare in a <br/><span className="gradient-text">New Dimension</span></h1>
+          <h1 className="title">Healthcare in a <br /><span className="gradient-text">New Dimension</span></h1>
           <p className="subtitle">Experience unparalleled realism and data accuracy. Horizon tracks health and monitors disease progression with interactive, immersive insights specifically designed for modern clinics.</p>
-          
+
           <div className="metrics-container">
             <div className="metric-card glass-card">
               <span className="metric-value">Maintaining</span>
@@ -71,7 +71,7 @@ export default function Home() {
 
       <div className="h-scroll-container">
         <div className="h-scroll-track" id="h-track">
-          
+
           <section className="h-panel panel-1" id="panel-1">
             <div className="section-content">
               <h2>Maintaining Medical Records</h2>

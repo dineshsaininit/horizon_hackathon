@@ -1,2 +1,11 @@
 Flask==3.0.0
-flask-cors==4.0.0
+flask-cors==6.0.2
+google-genai==1.73.1
+supabase==2.9.1
+python-dotenv==1.0.1
+joblib
+pandas
+scikit-learn
+xgboost
+requests
+pyserial
