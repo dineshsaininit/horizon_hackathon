@@ -337,7 +337,7 @@ Respond in a structured format with:
         # ── 6. Call Gemini AI ─────────────────────────────────────────────────
         try:
             response = client.models.generate_content(
-                model='gemini-2.0-flash',
+                model='gemini-2.5-flash',
                 contents=prompt
             )
             ai_text = response.text
