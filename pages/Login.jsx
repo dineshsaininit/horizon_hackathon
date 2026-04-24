@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import * as THREE from 'three';
 import { supabase } from '../supabaseClient.js';
+import { encodeData, decodeData, maskAadhar } from '../src/utils/privacy.js';
+import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
+import { firebaseAuth } from "../src/firebaseClient.js";
 
 /* ─── Medical 3D Scene (stethoscope ring, pill capsules, heartbeat pulse, molecule) ─── */
 function LoginScene({ canvasRef }) {
@@ -309,8 +312,13 @@ export default function Login() {
   const requestedIsDoctor = location.state?.isDoctor ?? requestedRole === 'doctor';
 
   const [isDoctor, setIsDoctor] = useState(requestedIsDoctor);
+  const [step, setStep] = useState('aadhar'); // 'aadhar' or 'otp'
   const [aadhar, setAadhar] = useState('');
-  const [password, setPassword] = useState('');
+  const [enteredOtp, setEnteredOtp] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [otpSentTo, setOtpSentTo] = useState('');
+  const [userData, setUserData] = useState(null);
+
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -322,31 +330,83 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(firebaseAuth, 'recaptcha-container', {
+        'size': 'invisible'
+      });
+    }
+  }, []);
+
+  useEffect(() => {
     setIsDoctor(requestedIsDoctor);
     setError('');
+    setStep('aadhar');
+    setAadhar('');
   }, [requestedIsDoctor]);
 
-  const handleLogin = async (e) => {
+  const handleRequestOtp = async (e) => {
     e.preventDefault();
+    if (aadhar.length !== 12) {
+      setError('Aadhar Number must be exactly 12 digits long.');
+      return;
+    }
     setError('');
     setLoading(true);
     const table = isDoctor ? 'doctors' : 'patients';
     try {
+      const encodedAadhar = encodeData(aadhar);
+
       const { data, error: dbErr } = await supabase
         .from(table)
         .select('*')
-        .eq('aadhar_no', aadhar)
-        .eq('password', password)
+        .eq('aadhar_no', encodedAadhar)
         .single();
+
       if (dbErr || !data) {
-        setError('Invalid Aadhar number or password. Please try again.');
+        setError('No account found with this Aadhar number.');
         setLoading(false);
         return;
       }
-      localStorage.setItem('user', JSON.stringify({ ...data, role: isDoctor ? 'doctor' : 'patient' }));
+
+      setUserData(data);
+      const decodedMobile = decodeData(data.mobile_no) || data.mobile_no;
+      if (!decodedMobile || decodedMobile.length < 10) {
+        setError('Recorded mobile number is invalid.');
+        setLoading(false);
+        return;
+      }
+
+      const formattedPhone = '+91' + decodedMobile.slice(-10); // Standardize to India for demo
+      setOtpSentTo(decodedMobile.slice(-4));
+
+      const confirmation = await signInWithPhoneNumber(firebaseAuth, formattedPhone, window.recaptchaVerifier);
+      setConfirmationResult(confirmation);
+      setStep('otp');
+      setLoading(false);
+    } catch (err) {
+      console.error(err);
+      setError('Firebase Auth Error: ' + (err.message || 'Trial failed. Try later.'));
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (!enteredOtp || enteredOtp.length !== 6) {
+      setError('Please enter a valid 6-digit OTP.');
+      return;
+    }
+    setError('');
+    setLoading(true);
+
+    try {
+      await confirmationResult.confirm(enteredOtp);
+      // Success!
+      localStorage.setItem('user', JSON.stringify({ ...userData, role: isDoctor ? 'doctor' : 'patient' }));
       navigate(isDoctor ? '/doctor-portal' : '/patient-portal');
-    } catch {
-      setError('Connection error. Please check your network and try again.');
+    } catch (err) {
+      console.error(err);
+      setError('Invalid OTP code. Please check and try again.');
       setLoading(false);
     }
   };
@@ -468,11 +528,14 @@ export default function Login() {
               }}>Login</span>
             </h1>
             <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.83rem', marginTop: '0.4rem' }}>
-              {isDoctor
-                ? 'Access your clinical dashboard and patient records'
-                : 'View your health records and AI insights'}
+              {step === 'aadhar' 
+                ? (isDoctor ? 'Access your clinical dashboard and patient records' : 'View your health records and AI insights')
+                : `Enter the 6-digit code sent to ******${otpSentTo}`
+              }
             </p>
           </div>
+
+          <div id="recaptcha-container"></div>
 
           {/* Error */}
           {error && (
@@ -487,52 +550,62 @@ export default function Login() {
           )}
 
           {/* Form */}
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', fontWeight: 600, letterSpacing: '0.3px' }}>
-                AADHAR NUMBER
-              </label>
-              <input
-                type="text"
-                value={aadhar}
-                onChange={e => setAadhar(e.target.value)}
-                placeholder="Enter your Aadhar no."
-                required
-                style={{
-                  width: '100%', padding: '0.85rem 1rem', borderRadius: 10,
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  background: 'rgba(255,255,255,0.04)',
-                  color: '#fff', fontSize: '0.95rem',
-                  outline: 'none', transition: 'border-color 0.2s',
-                  boxSizing: 'border-box'
-                }}
-                onFocus={e => e.target.style.borderColor = 'rgba(0,240,255,0.45)'}
-                onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', fontWeight: 600, letterSpacing: '0.3px' }}>
-                PASSWORD
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-                style={{
-                  width: '100%', padding: '0.85rem 1rem', borderRadius: 10,
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  background: 'rgba(255,255,255,0.04)',
-                  color: '#fff', fontSize: '0.95rem',
-                  outline: 'none', transition: 'border-color 0.2s',
-                  boxSizing: 'border-box'
-                }}
-                onFocus={e => e.target.style.borderColor = 'rgba(0,240,255,0.45)'}
-                onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-              />
-            </div>
+          <form onSubmit={step === 'aadhar' ? handleRequestOtp : handleVerifyOtp} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+            {step === 'aadhar' ? (
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', fontWeight: 600, letterSpacing: '0.3px' }}>
+                  AADHAR NUMBER
+                </label>
+                <input
+                  type="text"
+                  value={aadhar}
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, ''); // Only digits
+                    if (val.length <= 12) setAadhar(val);
+                  }}
+                  placeholder="Enter 12-digit Aadhar no."
+                  required
+                  maxLength="12"
+                  style={{
+                    width: '100%', padding: '0.85rem 1rem', borderRadius: 10,
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.04)',
+                    color: '#fff', fontSize: '0.95rem',
+                    outline: 'none', transition: 'border-color 0.2s',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={e => e.target.style.borderColor = 'rgba(0,240,255,0.45)'}
+                  onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                />
+              </div>
+            ) : (
+              <div>
+                <label style={{ display: 'block', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', fontWeight: 600, letterSpacing: '0.3px', textAlign: 'center' }}>
+                  6-DIGIT OTP
+                </label>
+                <input
+                  type="text"
+                  value={enteredOtp}
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    if (val.length <= 6) setEnteredOtp(val);
+                  }}
+                  placeholder="• • • • • •"
+                  required
+                  maxLength="6"
+                  style={{
+                    width: '100%', padding: '0.85rem 1rem', borderRadius: 10,
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.04)',
+                    color: '#fff', fontSize: '1.4rem', letterSpacing: '0.8rem', textAlign: 'center',
+                    outline: 'none', transition: 'border-color 0.2s',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={e => e.target.style.borderColor = 'rgba(0,240,255,0.45)'}
+                  onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                />
+              </div>
+            )}
 
             <button
               type="submit"
@@ -559,17 +632,22 @@ export default function Login() {
                     style={{ animation: 'spin 1s linear infinite' }}>
                     <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                   </svg>
-                  Authenticating…
+                  {step === 'aadhar' ? 'Sending SMS...' : 'Verifying...'}
                 </>
               ) : (
                 <>
-                  Sign In to {isDoctor ? 'Doctor Portal' : 'Patient Portal'}
+                  {step === 'aadhar' ? 'Request OTP via SMS' : `Sign In to ${isDoctor ? 'Doctor Portal' : 'Patient Portal'}`}
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
                 </>
               )}
             </button>
+            {step === 'otp' && !loading && (
+               <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>
+                 Didn't receive it? <span onClick={() => { setStep('aadhar'); setEnteredOtp(''); }} style={{ color: 'var(--accent-cyan)', cursor: 'pointer' }}>Change Aadhar / Retry</span>
+               </div>
+            )}
           </form>
 
           {/* Switch role hint */}
