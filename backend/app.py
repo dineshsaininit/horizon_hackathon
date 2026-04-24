@@ -96,33 +96,36 @@ def _read_sensor_loop():
     """Background thread: reads IoT sensor over serial, calibrates, then forecasts."""
     global iot_state
     target_readings = []
-    try:
-        import serial
-        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=2)
-        ser.reset_input_buffer()
-        while True:
-            ser.write(READ_COMMAND)
-            time.sleep(0.5)
-            if ser.in_waiting >= 26:
-                raw = ser.read(26)
-                data = _decode_packet(raw)
-                ser.reset_input_buffer()
-                if data:
-                    iot_state['current_raw'] = data
-                    if not iot_state['is_calibrated']:
-                        iot_state['count'] += 1
-                        if 20 <= iot_state['count'] <= 22:
-                            target_readings.append(data)
-                        if iot_state['count'] == 22:
-                            final = {}
-                            for key in target_readings[0]:
-                                final[key] = round(sum(r[key] for r in target_readings) / 3.0, 2)
-                            iot_state['final_calibrated_data'] = final
-                            iot_state['is_calibrated'] = True
-                            threading.Thread(target=_generate_weekly_forecast, daemon=True).start()
-            time.sleep(2)
-    except Exception as exc:
-        iot_state['error'] = str(exc)
+    while True:
+        try:
+            import serial
+            ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=2)
+            ser.reset_input_buffer()
+            iot_state['error'] = None # Clear previous error if reconnected
+            while True:
+                ser.write(READ_COMMAND)
+                time.sleep(0.5)
+                if ser.in_waiting >= 26:
+                    raw = ser.read(26)
+                    data = _decode_packet(raw)
+                    ser.reset_input_buffer()
+                    if data:
+                        iot_state['current_raw'] = data
+                        if not iot_state['is_calibrated']:
+                            iot_state['count'] += 1
+                            if 20 <= iot_state['count'] <= 22:
+                                target_readings.append(data)
+                            if iot_state['count'] == 22:
+                                final = {}
+                                for key in target_readings[0]:
+                                    final[key] = round(sum(r[key] for r in target_readings) / 3.0, 2)
+                                iot_state['final_calibrated_data'] = final
+                                iot_state['is_calibrated'] = True
+                                threading.Thread(target=_generate_weekly_forecast, daemon=True).start()
+                time.sleep(2)
+        except Exception as exc:
+            iot_state['error'] = str(exc)
+            time.sleep(5)  # Wait 5 seconds before retrying
 
 
 # Start the IoT sensor thread automatically
@@ -437,7 +440,13 @@ Keep it strictly informative, concise, and do not hallucinate details."""
             )
             ai_text = response.text
         except Exception as e:
-            ai_text = f"AI service temporarily unavailable. Error details: {str(e)}"
+            ai_text = (
+                f"⚠️ Active {disease} outbreak detected locally. Please take immediate precautions:\n\n"
+                f"• Avoid crowded areas and consider wearing a mask if respiratory.\n"
+                f"• Maintain strict hygiene; thoroughly wash hands and consume properly cooked food.\n"
+                f"• Ensure your surroundings are clean to prevent vector-borne transmission.\n\n"
+                f"Please consult the nearest recommended specialist below immediately for professional diagnosis if you show symptoms."
+            )
 
         return jsonify({
             "ai_prevention": ai_text,

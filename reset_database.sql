@@ -43,9 +43,24 @@ CREATE TABLE IF NOT EXISTS medicines (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
+CREATE TABLE IF NOT EXISTS governments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    aadhar_no TEXT UNIQUE NOT NULL,
+    mobile_no TEXT NOT NULL,
+    password TEXT NOT NULL,
+    post TEXT NOT NULL,
+    city TEXT,
+    district TEXT,
+    state TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+
 -- Reset Data
 TRUNCATE TABLE patients CASCADE;
 TRUNCATE TABLE doctors CASCADE;
+TRUNCATE TABLE governments CASCADE;
 TRUNCATE TABLE medical_history CASCADE;
 TRUNCATE TABLE medicines CASCADE;
 

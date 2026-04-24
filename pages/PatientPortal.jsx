@@ -13,7 +13,10 @@ export default function PatientPortal() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [records, setRecords] = useState([]);
   const [loadingRecords, setLoadingRecords] = useState(true);
-  const [activeMedicines, setActiveMedicines] = useState([]);
+  const [activePrescriptions, setActivePrescriptions] = useState([]); // grouped by record
+  const [terminatedIds, setTerminatedIds] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('terminated_rx') || '[]'); } catch { return []; }
+  });
 
   // ── AI Chat State ──
   const [chatOpen, setChatOpen] = useState(false);
@@ -57,36 +60,53 @@ export default function PatientPortal() {
     setLoadingRecords(false);
   };
 
-  const computeActiveMedicines = (history) => {
-    const active = [];
-    const now = new Date().setHours(0,0,0,0); // start of today
+  const computeActiveMedicines = (history, terminated = terminatedIds) => {
+    const groups = [];
+    const now = new Date().setHours(0, 0, 0, 0);
 
     history.forEach(record => {
+      // Skip if patient already terminated this prescription
+      if (terminated.includes(record.id)) return;
+
       if (record.prescription && record.prescription.startsWith('[')) {
         try {
           const parsedRx = JSON.parse(record.prescription);
+          const activeMeds = [];
+
           parsedRx.forEach(med => {
             const startDate = new Date(med.startDate || record.created_at);
             const endDate = new Date(startDate);
             endDate.setDate(endDate.getDate() + (med.durationDays || 1));
-            
-            // if endDate is today or in the future
+
             if (endDate.getTime() >= now) {
-               // Calculate days left
-               const diffTime = endDate.getTime() - new Date().getTime();
-               const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-               
-               active.push({
-                 ...med,
-                 prescribedBy: record.doctor_name,
-                 daysLeft: daysLeft > 0 ? daysLeft : 0
-               });
+              const diffTime = endDate.getTime() - new Date().getTime();
+              const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              activeMeds.push({ ...med, daysLeft: daysLeft > 0 ? daysLeft : 0 });
             }
           });
-        } catch(e) { }
+
+          if (activeMeds.length > 0) {
+            groups.push({
+              recordId: record.id,
+              doctorName: record.doctor_name || 'Unknown Doctor',
+              hospitalName: record.hospital_name || 'Horizon Healthcare',
+              date: record.created_at,
+              medicines: activeMeds
+            });
+          }
+        } catch (e) {}
       }
     });
-    setActiveMedicines(active);
+    setActivePrescriptions(groups);
+  };
+
+  const handleTerminate = (recordId) => {
+    if (!window.confirm('Are you sure you want to remove this prescription from your Dosage Tracker? Your medical history will remain unchanged.')) return;
+    const updated = [...terminatedIds, recordId];
+    setTerminatedIds(updated);
+    localStorage.setItem('terminated_rx', JSON.stringify(updated));
+    // Re-compute with new terminated list
+    computeActiveMedicines(records, updated);
   };
 
   const handlePrint = (id) => {
@@ -220,51 +240,118 @@ export default function PatientPortal() {
             </div>
           </div>
 
-          {/* ACTIVE DOSAGE TRACKER (New Section) */}
+          {/* ACTIVE DOSAGE TRACKER */}
           <div className="glass-card" style={{padding: '2rem', marginBottom: '2rem'}}>
             <h2><span style={{fontSize: '1.4rem', marginRight: '0.5rem'}}>⏱️</span>Active Dosage Tracker</h2>
             <hr style={{opacity: 0.2, margin: '1rem 0 1.5rem'}} />
-            
+
             {loadingRecords ? (
-               <p style={{color: 'rgba(255,255,255,0.5)'}}>Checking active medications...</p>
-            ) : activeMedicines.length === 0 ? (
-               <div style={{background: 'rgba(255,255,255,0.02)', padding: '2rem', borderRadius: '8px', textAlign: 'center'}}>
-                 <p style={{color: 'rgba(255,255,255,0.5)', margin: 0}}>You have no active medications prescribed in our secure records.</p>
-               </div>
+              <p style={{color: 'rgba(255,255,255,0.5)'}}>Checking active medications...</p>
+            ) : activePrescriptions.length === 0 ? (
+              <div style={{background: 'rgba(255,255,255,0.02)', padding: '2rem', borderRadius: '8px', textAlign: 'center'}}>
+                <p style={{color: 'rgba(255,255,255,0.5)', margin: 0}}>You have no active medications in your tracker.</p>
+              </div>
             ) : (
-               <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-                 {activeMedicines.map((med, idx) => (
-                   <div key={idx} style={{ 
-                     background: 'rgba(0,0,0,0.3)', 
-                     borderLeft: '4px solid #10b981', 
-                     padding: '1.2rem', 
-                     borderRadius: '8px',
-                     display: 'flex',
-                     justifyContent: 'space-between',
-                     alignItems: 'center'
-                   }}>
-                     <div>
-                       <h3 style={{margin: '0 0 0.4rem 0', color: '#10b981', fontSize: '1.15rem'}}>{med.name}</h3>
-                       <p style={{margin: '0 0 0.6rem 0', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem'}}>
-                         {med.instruction} • Prescribed by Dr. {med.prescribedBy}
-                       </p>
-                       <div style={{display: 'flex', gap: '0.5rem'}}>
-                         {med.timings?.morning && <span style={{background: 'rgba(255,255,255,0.08)', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600}}>🌅 Morning</span>}
-                         {med.timings?.afternoon && <span style={{background: 'rgba(255,255,255,0.08)', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600}}>☀️ Afternoon</span>}
-                         {med.timings?.night && <span style={{background: 'rgba(255,255,255,0.08)', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600}}>🌙 Night</span>}
-                         {!med.timings?.morning && !med.timings?.afternoon && !med.timings?.night && (
-                           <span style={{background: 'rgba(255,255,255,0.08)', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600}}>💊 As Required</span>
-                         )}
-                       </div>
-                     </div>
-                     <div style={{textAlign: 'right'}}>
-                        <div style={{background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 700}}>
-                          {med.daysLeft} Day{med.daysLeft !== 1 ? 's' : ''} Left
+              <div style={{display: 'flex', flexDirection: 'column', gap: '1.5rem'}}>
+                {activePrescriptions.map((rx) => (
+                  <div key={rx.recordId} style={{
+                    background: 'rgba(0,0,0,0.25)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '12px',
+                    overflow: 'hidden'
+                  }}>
+
+                    {/* Prescription Header — Doctor Info */}
+                    <div style={{
+                      background: 'linear-gradient(90deg, rgba(0,240,255,0.1), rgba(139,92,246,0.08))',
+                      borderBottom: '1px solid rgba(255,255,255,0.07)',
+                      padding: '1rem 1.2rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '0.5rem'
+                    }}>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}>
+                        <div style={{
+                          width: '38px', height: '38px', borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #00f0ff, #8b5cf6)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '1rem', flexShrink: 0
+                        }}>🩺</div>
+                        <div>
+                          <div style={{color: '#00f0ff', fontWeight: 700, fontSize: '1rem'}}>Dr. {rx.doctorName}</div>
+                          <div style={{color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem'}}>{rx.hospitalName} · {new Date(rx.date).toLocaleDateString()}</div>
                         </div>
-                     </div>
-                   </div>
-                 ))}
-               </div>
+                      </div>
+                      <button
+                        onClick={() => handleTerminate(rx.recordId)}
+                        style={{
+                          background: 'rgba(239,68,68,0.12)',
+                          border: '1px solid rgba(239,68,68,0.4)',
+                          color: '#f87171',
+                          padding: '0.4rem 1rem',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '0.82rem',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.25)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.12)'}
+                      >
+                        ✕ Terminate Prescription
+                      </button>
+                    </div>
+
+                    {/* Medicines List */}
+                    <div style={{padding: '1rem 1.2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem'}}>
+                      {rx.medicines.map((med, mi) => (
+                        <div key={mi} style={{
+                          background: 'rgba(255,255,255,0.04)',
+                          borderLeft: '3px solid #10b981',
+                          padding: '0.9rem 1rem',
+                          borderRadius: '0 8px 8px 0',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '1rem',
+                          flexWrap: 'wrap'
+                        }}>
+                          <div>
+                            <div style={{color: '#10b981', fontWeight: 700, fontSize: '1rem', marginBottom: '0.3rem'}}>💊 {med.name}</div>
+                            <div style={{color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', marginBottom: '0.4rem'}}>{med.instruction}</div>
+                            <div style={{display: 'flex', gap: '0.4rem', flexWrap: 'wrap'}}>
+                              {med.timings?.morning && <span style={{background: 'rgba(255,200,0,0.1)', border: '1px solid rgba(255,200,0,0.2)', padding: '0.15rem 0.5rem', borderRadius: '10px', fontSize: '0.72rem', color: '#fbbf24', fontWeight: 600}}>🌅 Morning</span>}
+                              {med.timings?.afternoon && <span style={{background: 'rgba(255,200,0,0.1)', border: '1px solid rgba(255,200,0,0.2)', padding: '0.15rem 0.5rem', borderRadius: '10px', fontSize: '0.72rem', color: '#fbbf24', fontWeight: 600}}>☀️ Afternoon</span>}
+                              {med.timings?.night && <span style={{background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', padding: '0.15rem 0.5rem', borderRadius: '10px', fontSize: '0.72rem', color: '#a5b4fc', fontWeight: 600}}>🌙 Night</span>}
+                              {!med.timings?.morning && !med.timings?.afternoon && !med.timings?.night && (
+                                <span style={{background: 'rgba(255,255,255,0.07)', padding: '0.15rem 0.5rem', borderRadius: '10px', fontSize: '0.72rem', fontWeight: 600}}>As Required</span>
+                              )}
+                            </div>
+                          </div>
+                          <div style={{
+                            background: 'rgba(16,185,129,0.1)',
+                            border: '1px solid rgba(16,185,129,0.3)',
+                            color: '#10b981',
+                            padding: '0.4rem 0.9rem',
+                            borderRadius: '20px',
+                            fontWeight: 700,
+                            fontSize: '0.9rem',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {med.daysLeft} Day{med.daysLeft !== 1 ? 's' : ''} Left
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 
