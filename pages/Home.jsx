@@ -30,13 +30,9 @@ export default function Home() {
           </a>
         </div>
         <div className="auth-buttons">
-          <a href="/login?role=patient" className="btn-clean" id="login-patient" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-            Patient Login
-          </a>
-          <a href="/login?role=doctor" className="btn-glow" id="login-doctor" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path><path d="M12 11v4"></path><path d="M10 13h4"></path></svg>
-            Doctor Portal
+          <a href="/login" className="btn-glow" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+            Login
           </a>
         </div>
       </nav>
@@ -71,7 +67,6 @@ export default function Home() {
 
       <div className="h-scroll-container">
         <div className="h-scroll-track" id="h-track">
-
           <section className="h-panel panel-1" id="panel-1">
             <div className="section-content">
               <h2>Maintaining Medical Records</h2>
@@ -92,7 +87,6 @@ export default function Home() {
               <p>Visualize real-time disease spread and predict future hotspots using advanced machine learning algorithms to respond proactively to threats.</p>
             </div>
           </section>
-
         </div>
       </div>
 
@@ -100,7 +94,7 @@ export default function Home() {
         <div className="hero-content">
           <h1 className="title">Join the <span className="gradient-text">Future</span></h1>
           <div className="cta-group">
-            <a href="/login?role=patient" className="btn-primary" style={{ textDecoration: 'none' }}>Login</a>
+            <a href="/login" className="btn-primary" style={{ textDecoration: 'none' }}>Login</a>
           </div>
         </div>
       </section>

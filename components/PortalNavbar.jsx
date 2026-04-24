@@ -20,7 +20,14 @@ export default function PortalNavbar({ user, role, activeTab, setActiveTab }) {
     { id: 'history',   label: 'My Records', icon: '📋' },
   ];
 
-  const tabs = role === 'doctor' ? doctorTabs : patientTabs;
+  const govtTabs = [
+    { id: 'dashboard', label: 'Outbreak Analytics', icon: '📈' },
+    { id: 'map',       label: 'Interactive Map', icon: '🌍' },
+  ];
+
+  let tabs = patientTabs;
+  if (role === 'doctor') tabs = doctorTabs;
+  if (role === 'government') tabs = govtTabs;
 
   return (
     <nav className="portal-navbar">
@@ -31,7 +38,7 @@ export default function PortalNavbar({ user, role, activeTab, setActiveTab }) {
           Horizon
         </span>
         <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginLeft: '0.3rem', textTransform: 'uppercase', letterSpacing: '1px', alignSelf: 'flex-end', marginBottom: '3px' }}>
-          {role === 'doctor' ? 'Doctor Portal' : 'Patient Portal'}
+          {role === 'doctor' ? 'Doctor Portal' : role === 'government' ? 'Government Portal' : 'Patient Portal'}
         </span>
       </div>
 
@@ -57,7 +64,7 @@ export default function PortalNavbar({ user, role, activeTab, setActiveTab }) {
         </div>
         <div className="portal-nav-userinfo">
           <span className="portal-nav-name">{user?.name || 'User'}</span>
-          <span className="portal-nav-role">{role === 'doctor' ? '🩺 Doctor' : '👤 Patient'}</span>
+          <span className="portal-nav-role">{role === 'doctor' ? '🩺 Doctor' : role === 'government' ? '🏛️ Official' : '👤 Patient'}</span>
         </div>
         <button className="portal-nav-logout" onClick={handleLogout} title="Logout">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

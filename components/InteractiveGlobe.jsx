@@ -85,7 +85,7 @@ export default function InteractiveGlobe({ onMarkerClick, focusTarget }) {
             
             const text = record.past_medical_record || '';
             DISEASE_KEYWORDS.forEach(disease => {
-               if (text.includes(disease)) {
+               if (text.toLowerCase().includes(disease.toLowerCase())) {
                   if (!aggregations[district]) aggregations[district] = {};
                   if (!aggregations[district][disease]) aggregations[district][disease] = 0;
                   aggregations[district][disease] += 1;
@@ -102,7 +102,7 @@ export default function InteractiveGlobe({ onMarkerClick, focusTarget }) {
                 const coords = DISTRICT_COORDS[district];
                 if (coords) {
                    // Mathematical scaling formula: Simulate visually accurate city-wide scales from 1 document tally
-                   const visualTally = count * 26 + Math.floor(Math.random() * 5); 
+                   const visualTally = count * 26;
                    
                    compiledMarkers.push({
                        lat: coords.lat,

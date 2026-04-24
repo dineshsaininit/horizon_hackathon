@@ -5,6 +5,7 @@ import Login from './pages/Login.jsx';
 import DoctorPortal from './pages/DoctorPortal.jsx';
 import PatientPortal from './pages/PatientPortal.jsx';
 import HealthMap from './pages/HealthMap.jsx';
+import GovernmentPortal from './pages/GovernmentPortal.jsx';
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="/doctor-portal" element={<DoctorPortal />} />
         <Route path="/patient-portal" element={<PatientPortal />} />
         <Route path="/health-map" element={<HealthMap />} />
+        <Route path="/government-portal" element={<GovernmentPortal />} />
       </Routes>
     </Router>
   );
