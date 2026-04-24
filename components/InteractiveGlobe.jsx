@@ -302,7 +302,7 @@ export default function InteractiveGlobe({ onMarkerClick, focusTarget }) {
       renderer.dispose();
       scene.clear();
     };
-  }, [dbMarkers, onMarkerClick, focusTarget]); // added dbMarkers logic dependencies
+  }, [dbMarkers, focusTarget]); // Removed onMarkerClick to prevent massive WebGL reloads on click
 
   return <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%', cursor: 'grab' }} />;
 }

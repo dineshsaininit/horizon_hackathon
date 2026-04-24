@@ -3,6 +3,7 @@ import json
 import threading
 import time
 import pathlib
+import base64
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -140,6 +141,16 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 client = genai.Client(api_key=GEMINI_API_KEY)
 
+def decode_data(encoded_str):
+    """Symmetrically decode Base64 + Caesar shift cipher used by frontend."""
+    if not encoded_str: return encoded_str
+    try:
+        decoded_bytes = base64.b64decode(encoded_str)
+        decoded_str = decoded_bytes.decode('utf-8')
+        return "".join([chr(ord(c) - 3) for c in decoded_str])
+    except Exception:
+        return encoded_str
+
 # ── Disease → Specialization mapping ─────────────────────────────────────────
 DISEASE_SPECIALIZATION_MAP = {
     'malaria':      'Infectious Disease',
@@ -168,8 +179,8 @@ def get_needed_specializations(diseases):
         spec = DISEASE_SPECIALIZATION_MAP.get(d.lower())
         if spec:
             specs.add(spec)
-    # Always include General Physician as fallback
-    specs.add('General Physician')
+    # Always include General Medicine as fallback
+    specs.add('General Medicine')
     return list(specs)
 
 
@@ -243,7 +254,7 @@ def ai_assistant():
             )
             top_doctors = [{
                 'name': d['name'],
-                'specialization': d.get('specialization', 'General Physician'),
+                'specialization': d.get('specialization', 'General Medicine'),
                 'hospital_name': d['hospital_name'],
                 'city': d.get('city', ''),
                 'state': d.get('state', ''),
@@ -262,7 +273,7 @@ def ai_assistant():
                 )
                 top_doctors = [{
                     'name': d['name'],
-                    'specialization': d.get('specialization', 'General Physician'),
+                    'specialization': d.get('specialization', 'General Medicine'),
                     'hospital_name': d['hospital_name'],
                     'city': d.get('city', ''),
                     'state': d.get('state', ''),
@@ -372,6 +383,68 @@ def iot_status():
       - weekly_forecast (7-day XGBoost AQI predictions)
     """
     return jsonify(iot_state)
+
+
+@app.route('/api/health-map-ai', methods=['POST'])
+def health_map_ai():
+    """
+    AI Health Map endpoint.
+    Expects JSON: { disease: string, city: string, district: string, state: string, cases: number }
+    Returns: { ai_prevention: string, nearest_doctor: dict }
+    """
+    try:
+        body = request.get_json(silent=True) or {}
+        disease = body.get('disease', '').strip()
+        city = body.get('city', '').strip()
+        district = body.get('district', '').strip()
+        state = body.get('state', '').strip()
+        cases = body.get('cases', 0)
+
+        if not disease:
+            return jsonify({"error": "Disease name is required."}), 400
+
+        # 1. Find nearest Specialist Doctor
+        spec = DISEASE_SPECIALIZATION_MAP.get(disease.lower(), 'General Medicine')
+        doc_res = supabase.table('doctors').select('*').in_('specialization', [spec, 'General Medicine']).execute()
+        all_doctors = doc_res.data or []
+        
+        ranked_doctors = rank_doctors(all_doctors, district, city, state)
+        
+        nearest_doctor = None
+        if ranked_doctors:
+            best = ranked_doctors[0]
+            nearest_doctor = {
+                'name': best.get('name', 'Unknown'),
+                'specialization': best.get('specialization', spec),
+                'hospital_name': best.get('hospital_name', 'Unknown Hospital'),
+                'mobile_no': decode_data(best.get('mobile_no', '')),
+                'city': best.get('city', ''),
+                'state': best.get('state', '')
+            }
+
+        # 2. Call Gemini for Prevention & Symptoms
+        prompt = f"""You are Horizon Health AI Outbreak Radar. A user has clicked on a map marker for an active outbreak of {disease} in {city}, {state} with {cases} active cases.
+Provide a clear, brief, 3-paragraph summary covering:
+1. Quick overview of the transmission mechanism.
+2. 3-4 bullet points of early symptoms.
+3. 3-4 bullet points of urgent prevention measures locals should take.
+Keep it strictly informative, concise, and do not hallucinate details."""
+        
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.0-flash',
+                contents=prompt
+            )
+            ai_text = response.text
+        except Exception as e:
+            ai_text = f"AI service temporarily unavailable. Error details: {str(e)}"
+
+        return jsonify({
+            "ai_prevention": ai_text,
+            "nearest_doctor": nearest_doctor
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':

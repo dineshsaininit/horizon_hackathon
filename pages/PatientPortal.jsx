@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Portal3DBackground from '../components/Portal3DBackground.jsx';
 import PortalNavbar from '../components/PortalNavbar.jsx';
 import { supabase } from '../supabaseClient.js';
+import { decodeData, maskAadhar } from '../src/utils/privacy.js';
 
 const AI_BACKEND_URL = 'http://localhost:5000';
 
@@ -12,6 +13,7 @@ export default function PatientPortal() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [records, setRecords] = useState([]);
   const [loadingRecords, setLoadingRecords] = useState(true);
+  const [activeMedicines, setActiveMedicines] = useState([]);
 
   // ── AI Chat State ──
   const [chatOpen, setChatOpen] = useState(false);
@@ -50,8 +52,41 @@ export default function PatientPortal() {
     
     if (!error && data) {
       setRecords(data);
+      computeActiveMedicines(data);
     }
     setLoadingRecords(false);
+  };
+
+  const computeActiveMedicines = (history) => {
+    const active = [];
+    const now = new Date().setHours(0,0,0,0); // start of today
+
+    history.forEach(record => {
+      if (record.prescription && record.prescription.startsWith('[')) {
+        try {
+          const parsedRx = JSON.parse(record.prescription);
+          parsedRx.forEach(med => {
+            const startDate = new Date(med.startDate || record.created_at);
+            const endDate = new Date(startDate);
+            endDate.setDate(endDate.getDate() + (med.durationDays || 1));
+            
+            // if endDate is today or in the future
+            if (endDate.getTime() >= now) {
+               // Calculate days left
+               const diffTime = endDate.getTime() - new Date().getTime();
+               const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+               
+               active.push({
+                 ...med,
+                 prescribedBy: record.doctor_name,
+                 daysLeft: daysLeft > 0 ? daysLeft : 0
+               });
+            }
+          });
+        } catch(e) { }
+      }
+    });
+    setActiveMedicines(active);
   };
 
   const handlePrint = (id) => {
@@ -172,17 +207,65 @@ export default function PatientPortal() {
             <div className="portal-profile-grid">
               <div className="portal-profile-item">
                 <span className="portal-profile-label">Aadhar No.</span>
-                <span className="portal-profile-value">{user.aadhar_no}</span>
+                <span className="portal-profile-value">{maskAadhar(decodeData(user.aadhar_no) || user.aadhar_no)}</span>
               </div>
               <div className="portal-profile-item">
                 <span className="portal-profile-label">Mobile</span>
-                <span className="portal-profile-value">{user.mobile_no}</span>
+                <span className="portal-profile-value">{decodeData(user.mobile_no) || user.mobile_no}</span>
               </div>
               <div className="portal-profile-item">
                 <span className="portal-profile-label">Location</span>
                 <span className="portal-profile-value">{user.city}, {user.district}, {user.state}</span>
               </div>
             </div>
+          </div>
+
+          {/* ACTIVE DOSAGE TRACKER (New Section) */}
+          <div className="glass-card" style={{padding: '2rem', marginBottom: '2rem'}}>
+            <h2><span style={{fontSize: '1.4rem', marginRight: '0.5rem'}}>⏱️</span>Active Dosage Tracker</h2>
+            <hr style={{opacity: 0.2, margin: '1rem 0 1.5rem'}} />
+            
+            {loadingRecords ? (
+               <p style={{color: 'rgba(255,255,255,0.5)'}}>Checking active medications...</p>
+            ) : activeMedicines.length === 0 ? (
+               <div style={{background: 'rgba(255,255,255,0.02)', padding: '2rem', borderRadius: '8px', textAlign: 'center'}}>
+                 <p style={{color: 'rgba(255,255,255,0.5)', margin: 0}}>You have no active medications prescribed in our secure records.</p>
+               </div>
+            ) : (
+               <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                 {activeMedicines.map((med, idx) => (
+                   <div key={idx} style={{ 
+                     background: 'rgba(0,0,0,0.3)', 
+                     borderLeft: '4px solid #10b981', 
+                     padding: '1.2rem', 
+                     borderRadius: '8px',
+                     display: 'flex',
+                     justifyContent: 'space-between',
+                     alignItems: 'center'
+                   }}>
+                     <div>
+                       <h3 style={{margin: '0 0 0.4rem 0', color: '#10b981', fontSize: '1.15rem'}}>{med.name}</h3>
+                       <p style={{margin: '0 0 0.6rem 0', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem'}}>
+                         {med.instruction} • Prescribed by Dr. {med.prescribedBy}
+                       </p>
+                       <div style={{display: 'flex', gap: '0.5rem'}}>
+                         {med.timings?.morning && <span style={{background: 'rgba(255,255,255,0.08)', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600}}>🌅 Morning</span>}
+                         {med.timings?.afternoon && <span style={{background: 'rgba(255,255,255,0.08)', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600}}>☀️ Afternoon</span>}
+                         {med.timings?.night && <span style={{background: 'rgba(255,255,255,0.08)', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600}}>🌙 Night</span>}
+                         {!med.timings?.morning && !med.timings?.afternoon && !med.timings?.night && (
+                           <span style={{background: 'rgba(255,255,255,0.08)', padding: '0.2rem 0.6rem', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600}}>💊 As Required</span>
+                         )}
+                       </div>
+                     </div>
+                     <div style={{textAlign: 'right'}}>
+                        <div style={{background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', padding: '0.5rem 1rem', borderRadius: '20px', fontWeight: 700}}>
+                          {med.daysLeft} Day{med.daysLeft !== 1 ? 's' : ''} Left
+                        </div>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+            )}
           </div>
 
           {/* Quick action */}
@@ -230,14 +313,46 @@ export default function PatientPortal() {
                        <h4 style={{color: '#8b5cf6', marginBottom: '0.5rem', fontSize: '1rem'}}>Clinical Notes</h4>
                        <p style={{lineHeight: '1.6', marginBottom: '1rem', whiteSpace: 'pre-wrap'}}>{r.past_medical_record}</p>
                        
-                       {r.prescription && (
-                         <>
-                           <h4 style={{color: '#10b981', marginBottom: '0.5rem', fontSize: '1rem'}}>Prescription</h4>
-                           <div style={{background: 'rgba(16, 185, 129, 0.05)', borderLeft: '4px solid #10b981', padding: '1rem', borderRadius: '0 8px 8px 0'}}>
-                             <p style={{lineHeight: '1.6', whiteSpace: 'pre-wrap'}}>{r.prescription}</p>
-                           </div>
-                         </>
-                       )}
+                       {(() => {
+                         if (!r.prescription) return null;
+                         
+                         let parsedRx = null;
+                         if (r.prescription.startsWith('[')) {
+                           try { parsedRx = JSON.parse(r.prescription); } catch(e){}
+                         }
+
+                         if (parsedRx) {
+                           return (
+                             <>
+                               <h4 style={{color: '#10b981', marginBottom: '0.5rem', fontSize: '1rem'}}>Structured Prescription</h4>
+                               <div style={{background: 'rgba(16, 185, 129, 0.05)', borderLeft: '4px solid #10b981', padding: '1rem', borderRadius: '0 8px 8px 0'}}>
+                                  <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                                    {parsedRx.map((m, i) => {
+                                      const timings = Object.keys(m.timings || {}).filter(k=>m.timings[k]).join(', ');
+                                      return (
+                                        <li key={i} style={{ color: '#cbd5e1', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
+                                          <strong style={{ color: '#00f0ff' }}>{m.name}</strong> <br/>
+                                          <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.6)' }}>
+                                            [{timings || 'As required'}] — {m.instruction} ({m.durationDays || 5} Days)
+                                          </span>
+                                        </li>
+                                      )
+                                    })}
+                                  </ul>
+                               </div>
+                             </>
+                           );
+                         }
+
+                         return (
+                           <>
+                             <h4 style={{color: '#10b981', marginBottom: '0.5rem', fontSize: '1rem'}}>Prescription</h4>
+                             <div style={{background: 'rgba(16, 185, 129, 0.05)', borderLeft: '4px solid #10b981', padding: '1rem', borderRadius: '0 8px 8px 0'}}>
+                               <p style={{lineHeight: '1.6', whiteSpace: 'pre-wrap'}}>{r.prescription}</p>
+                             </div>
+                           </>
+                         );
+                       })()}
                      </div>
                    </div>
                  ))}

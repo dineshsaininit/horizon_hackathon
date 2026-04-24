@@ -5,13 +5,42 @@ import InteractiveGlobe from '../components/InteractiveGlobe.jsx';
 export default function HealthMap() {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [focusTarget, setFocusTarget] = useState(null);
+  const [aiData, setAiData] = useState(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
+  const handleMarkerClick = async (data) => {
+    setSelectedLocation(data);
+    if (!data) return; // Prevent fetching if they clicked empty space
+    
+    setAiData(null);
+    setIsAiLoading(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/health-map-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          disease: data.disease, 
+          city: data.city, 
+          district: data.city, // Rough approximation based on frontend dataset
+          state: '', 
+          cases: data.cases 
+        })
+      });
+      const result = await res.json();
+      setAiData(result);
+    } catch (err) {
+      setAiData({ error: 'AI synchronization failed.' });
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden', position: 'relative', background: '#030614' }}>
-
+      
       {/* Background Interactive Globe */}
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}>
-        <InteractiveGlobe onMarkerClick={(data) => setSelectedLocation(data)} focusTarget={focusTarget} />
+        <InteractiveGlobe onMarkerClick={handleMarkerClick} focusTarget={focusTarget} />
       </div>
 
       <div className="glass-overlay"></div>
@@ -92,9 +121,51 @@ export default function HealthMap() {
             <span style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#ff4444' }}>{selectedLocation.cases}</span>
           </div>
 
-          <div>
-            <h4 style={{ color: '#ccc', marginBottom: '0.5rem', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '1px' }}>AI Recommended Action</h4>
-            <p style={{ lineHeight: '1.5', fontSize: '0.95rem', color: '#fff' }}>{selectedLocation.recommendations}</p>
+          <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '0.5rem', marginBottom: '1.5rem' }}>
+            <h4 style={{ color: '#ccc', marginBottom: '0.8rem', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>🧠</span> AI Diagnostics & Prevention
+            </h4>
+            
+            {isAiLoading ? (
+              <div style={{ padding: '1rem', background: 'rgba(0, 240, 255, 0.05)', borderRadius: '8px', border: '1px solid rgba(0, 240, 255, 0.2)', color: '#00f0ff', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ animation: 'spin 1.5s linear infinite' }}>
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+                </svg>
+                Analyzing Outbreak Data...
+              </div>
+            ) : aiData?.error ? (
+              <p style={{ color: '#ff4444', fontSize: '0.9rem' }}>{aiData.error}</p>
+            ) : aiData ? (
+              <div style={{ fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)', lineHeight: '1.6' }}>
+                <div style={{ whiteSpace: 'pre-wrap', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', borderLeft: '3px solid #8b5cf6', marginBottom: '1.5rem' }}>
+                  {aiData.ai_prevention}
+                </div>
+
+                <h4 style={{ color: '#ccc', marginBottom: '0.8rem', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span>🚑</span> Nearest Required Specialist
+                </h4>
+                {aiData.nearest_doctor ? (
+                  <div style={{ background: 'linear-gradient(135deg, rgba(0,240,255,0.1), rgba(0,0,0,0))', padding: '1.2rem', borderRadius: '8px', border: '1px solid rgba(0,240,255,0.2)' }}>
+                    <p style={{ margin: '0 0 0.3rem 0', fontWeight: 'bold', fontSize: '1.1rem', color: '#fff' }}>
+                      Dr. {aiData.nearest_doctor.name}
+                    </p>
+                    <p style={{ margin: '0 0 0.3rem 0', color: '#00f0ff', fontSize: '0.85rem' }}>
+                      {aiData.nearest_doctor.specialization} • {aiData.nearest_doctor.hospital_name}
+                    </p>
+                    <p style={{ margin: '0', color: '#94a3b8', fontSize: '0.85rem' }}>
+                      📍 {aiData.nearest_doctor.city}, {aiData.nearest_doctor.state}
+                    </p>
+                    <div style={{ marginTop: '1rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.1)', padding: '0.5rem 1rem', borderRadius: '20px', fontSize: '0.9rem', color: '#fff' }}>
+                      📞 {aiData.nearest_doctor.mobile_no}
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ color: '#94a3b8', fontSize: '0.9rem' }}>No specialists found nearby.</p>
+                )}
+              </div>
+            ) : (
+              <p style={{ lineHeight: '1.5', fontSize: '0.95rem', color: '#fff' }}>{selectedLocation.recommendations}</p>
+            )}
           </div>
 
           <button className="btn-glow" style={{ width: '100%', marginTop: '2rem' }}>Dispatch Resources</button>

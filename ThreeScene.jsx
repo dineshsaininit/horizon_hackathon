@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useLayoutEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -11,8 +11,9 @@ gsap.registerPlugin(ScrollTrigger);
 export default function ThreeScene() {
   const canvasRef = useRef(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     let animationFrameId;
+    let setupTimeoutId;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -311,78 +312,80 @@ export default function ThreeScene() {
     window.addEventListener('scroll', onScroll);
     window.addEventListener('mousemove', onMouseMove);
 
-    // Give DOM a tick to render elements before ScrollTrigger
-    setTimeout(() => {
-      const track = document.querySelector('.h-scroll-track');
-      const sections = gsap.utils.toArray('.h-panel');
+    const ctx = gsap.context(() => {
+      // Give DOM a tick to render elements before ScrollTrigger
+      setupTimeoutId = window.setTimeout(() => {
+        const track = document.querySelector('.h-scroll-track');
+        const sections = gsap.utils.toArray('.h-panel');
 
-      if (track && sections.length > 0) {
-        gsap.to(sections, {
-          xPercent: -100 * (sections.length - 1),
-          ease: "none",
-          scrollTrigger: {
-            trigger: ".h-scroll-container",
-            pin: true,
-            scrub: 1,
-            end: () => "+=" + track.offsetWidth,
-          }
-        });
-
-        ScrollTrigger.create({
-          trigger: ".h-scroll-container",
-          start: "top center",
-          onEnter: () => {
-            gsap.to(dnaGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
-            gsap.to(recordsGroup.scale, { x: 1.6, y: 1.6, z: 1.6, duration: 0.5, overwrite: "auto" });
-          },
-          onLeaveBack: () => {
-            gsap.to(dnaGroup.scale, { x: 1.6, y: 1.6, z: 1.6, duration: 0.5, overwrite: "auto" });
-            gsap.to(recordsGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
-          }
-        });
-
-        ScrollTrigger.create({
-          trigger: ".h-scroll-container",
-          start: "top top",
-          end: () => "+=" + track.offsetWidth,
-          scrub: 1,
-          onUpdate: (self) => {
-            const p = self.progress;
-            if (p === 0 && !self.isActive) return;
-            if (p < 0.33) {
-              gsap.to(recordsGroup.scale, { x: 1.6, y: 1.6, z: 1.6, duration: 0.5, overwrite: "auto" });
-              gsap.to(aiDoctorGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
-              gsap.to(globeGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
-              gsap.to(futureGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
-            } else if (p >= 0.33 && p < 0.66) {
-              gsap.to(recordsGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
-              gsap.to(aiDoctorGroup.scale, { x: 1.6, y: 1.6, z: 1.6, duration: 0.5, overwrite: "auto" });
-              gsap.to(globeGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
-              gsap.to(futureGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
-            } else {
-              gsap.to(recordsGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
-              gsap.to(aiDoctorGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
-              gsap.to(globeGroup.scale, { x: 1.6, y: 1.6, z: 1.6, duration: 0.5, overwrite: "auto" });
-              gsap.to(futureGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
+        if (track && sections.length > 0) {
+          gsap.to(sections, {
+            xPercent: -100 * (sections.length - 1),
+            ease: "none",
+            scrollTrigger: {
+              trigger: ".h-scroll-container",
+              pin: true,
+              scrub: 1,
+              end: () => "+=" + track.offsetWidth,
             }
-          }
-        });
+          });
 
-        ScrollTrigger.create({
-          trigger: ".end-section",
-          start: "top center",
-          end: "bottom center",
-          onEnter: () => {
-            gsap.to(globeGroup.scale, { x: 0, y: 0, z: 0, duration: 0.8, overwrite: "auto" });
-            gsap.to(futureGroup.scale, { x: 1.6, y: 1.6, z: 1.6, duration: 0.8, overwrite: "auto" });
-          },
-          onLeaveBack: () => {
-            gsap.to(futureGroup.scale, { x: 0, y: 0, z: 0, duration: 0.8, overwrite: "auto" });
-            gsap.to(globeGroup.scale, { x: 1.6, y: 1.6, z: 1.6, duration: 0.8, overwrite: "auto" });
-          }
-        });
-      }
-    }, 100);
+          ScrollTrigger.create({
+            trigger: ".h-scroll-container",
+            start: "top center",
+            onEnter: () => {
+              gsap.to(dnaGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
+              gsap.to(recordsGroup.scale, { x: 1.6, y: 1.6, z: 1.6, duration: 0.5, overwrite: "auto" });
+            },
+            onLeaveBack: () => {
+              gsap.to(dnaGroup.scale, { x: 1.6, y: 1.6, z: 1.6, duration: 0.5, overwrite: "auto" });
+              gsap.to(recordsGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
+            }
+          });
+
+          ScrollTrigger.create({
+            trigger: ".h-scroll-container",
+            start: "top top",
+            end: () => "+=" + track.offsetWidth,
+            scrub: 1,
+            onUpdate: (self) => {
+              const p = self.progress;
+              if (p === 0 && !self.isActive) return;
+              if (p < 0.33) {
+                gsap.to(recordsGroup.scale, { x: 1.6, y: 1.6, z: 1.6, duration: 0.5, overwrite: "auto" });
+                gsap.to(aiDoctorGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
+                gsap.to(globeGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
+                gsap.to(futureGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
+              } else if (p >= 0.33 && p < 0.66) {
+                gsap.to(recordsGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
+                gsap.to(aiDoctorGroup.scale, { x: 1.6, y: 1.6, z: 1.6, duration: 0.5, overwrite: "auto" });
+                gsap.to(globeGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
+                gsap.to(futureGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
+              } else {
+                gsap.to(recordsGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
+                gsap.to(aiDoctorGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
+                gsap.to(globeGroup.scale, { x: 1.6, y: 1.6, z: 1.6, duration: 0.5, overwrite: "auto" });
+                gsap.to(futureGroup.scale, { x: 0, y: 0, z: 0, duration: 0.5, overwrite: "auto" });
+              }
+            }
+          });
+
+          ScrollTrigger.create({
+            trigger: ".end-section",
+            start: "top center",
+            end: "bottom center",
+            onEnter: () => {
+              gsap.to(globeGroup.scale, { x: 0, y: 0, z: 0, duration: 0.8, overwrite: "auto" });
+              gsap.to(futureGroup.scale, { x: 1.6, y: 1.6, z: 1.6, duration: 0.8, overwrite: "auto" });
+            },
+            onLeaveBack: () => {
+              gsap.to(futureGroup.scale, { x: 0, y: 0, z: 0, duration: 0.8, overwrite: "auto" });
+              gsap.to(globeGroup.scale, { x: 1.6, y: 1.6, z: 1.6, duration: 0.8, overwrite: "auto" });
+            }
+          });
+        }
+      }, 100);
+    });
 
     const clock = new THREE.Clock();
 
@@ -439,11 +442,12 @@ export default function ThreeScene() {
 
     // CLEANUP
     return () => {
+      window.clearTimeout(setupTimeoutId);
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('resize', onResize);
       cancelAnimationFrame(animationFrameId);
-      ScrollTrigger.getAll().forEach(t => t.kill());
+      ctx.revert();
       renderer.dispose();
       // Dispose materials/geometry in a full prod app...
     };
