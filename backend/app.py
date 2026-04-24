@@ -261,7 +261,7 @@ def ai_assistant():
                 'hospital_name': d['hospital_name'],
                 'city': d.get('city', ''),
                 'state': d.get('state', ''),
-                'mobile_no': d.get('mobile_no', '')
+                'mobile_no': decode_data(d.get('mobile_no', ''))
             } for d in ranked_doctors[:3]]
         except Exception:
             # Specialization column may not exist yet — fallback to all doctors
@@ -280,7 +280,7 @@ def ai_assistant():
                     'hospital_name': d['hospital_name'],
                     'city': d.get('city', ''),
                     'state': d.get('state', ''),
-                    'mobile_no': d.get('mobile_no', '')
+                    'mobile_no': decode_data(d.get('mobile_no', ''))
                 } for d in ranked_doctors[:3]]
             except Exception:
                 top_doctors = []
@@ -337,7 +337,7 @@ Respond in a structured format with:
         # ── 6. Call Gemini AI ─────────────────────────────────────────────────
         try:
             response = client.models.generate_content(
-                model='gemini-2.0-flash',
+                model='gemini-2.5-flash',
                 contents=prompt
             )
             ai_text = response.text

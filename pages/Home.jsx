@@ -1,11 +1,75 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import ThreeScene from '../ThreeScene.jsx';
 
 export default function Home() {
+  const [showDemo, setShowDemo] = useState(false);
+
   return (
     <>
       <div className="glass-overlay"></div>
+
+      {/* ── Video Modal ── */}
+      {showDemo && (
+        <div
+          onClick={() => setShowDemo(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'fadeIn 0.3s ease'
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'relative',
+              width: 'min(900px, 92vw)',
+              background: 'rgba(15,15,30,0.9)',
+              border: '1px solid rgba(100,120,255,0.3)',
+              borderRadius: '20px',
+              boxShadow: '0 0 60px rgba(100,120,255,0.3)',
+              overflow: 'hidden',
+              animation: 'slideUp 0.35s ease'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '1rem 1.4rem',
+              borderBottom: '1px solid rgba(100,120,255,0.15)'
+            }}>
+              <span style={{ color: '#a0aec0', fontWeight: 600, fontSize: '0.95rem', letterSpacing: '0.05em' }}>
+                🎬 Horizon Health — Demo Video
+              </span>
+              <button
+                onClick={() => setShowDemo(false)}
+                style={{
+                  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+                  color: '#fff', borderRadius: '50%', width: '32px', height: '32px',
+                  cursor: 'pointer', fontSize: '1rem', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center'
+                }}
+              >✕</button>
+            </div>
+
+            {/* YouTube Embed */}
+            <div style={{ position: 'relative', paddingTop: '56.25%' }}>
+              <iframe
+                src="https://www.youtube.com/embed/qRoxvlqfwAk?autoplay=1"
+                title="Horizon Health Demo"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{
+                  position: 'absolute', top: 0, left: 0,
+                  width: '100%', height: '100%', border: 'none'
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <nav className="navbar">
         <div className="logo">
@@ -59,8 +123,8 @@ export default function Home() {
           </div>
 
           <div className="cta-group">
-            <button className="btn-primary">Get Started</button>
-            <button className="btn-secondary">Watch Demo <span className="play-icon">▶</span></button>
+            <Link to="/login" className="btn-primary" style={{ textDecoration: 'none' }}>Get Started</Link>
+            <button className="btn-secondary" onClick={() => setShowDemo(true)}>Watch Demo <span className="play-icon">▶</span></button>
           </div>
         </div>
       </main>
@@ -100,6 +164,17 @@ export default function Home() {
       </section>
 
       <ThreeScene />
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(40px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
     </>
   );
 }
